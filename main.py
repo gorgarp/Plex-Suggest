@@ -29,6 +29,7 @@ def get_watch_history_of_all_users():
     watch_history_response = requests.get(watch_history_url, headers=headers)
     print(watch_history_response.text)
     watch_history_data = json.loads(watch_history_response.text)
+    print(watch_history_response.status_code)
     watch_history_data = []
     for session in watch_history_data["MediaContainer"]["Metadata"]:
         watch_history_data.append([session["title"], session["year"], session["rating"]])
