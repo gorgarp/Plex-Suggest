@@ -43,7 +43,7 @@ else:
 vectorizer = TfidfVectorizer()
 
 # Fit the vectorizer to the titles, genres, tags, rating and popularity
-vectorizer.fit(titles + genres + studio + rating + popularity)
+vectorizer.fit(titles + genres + studio + rating )
 
 # Get the user's watch history
 watch_history = plex.library.recentlyWatched()
