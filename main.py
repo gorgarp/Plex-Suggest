@@ -21,9 +21,11 @@ except:
     watch_history = plex.history()
     metadata = [h.metadata for h in watch_history]
     users = [h.user for h in watch_history]
-    user_history = {user: [m.ratingKey for m in metadata if m.user == user] for user in set(users)}
+    user_history = {
+        user: [m.ratingKey for m in metadata if m.user == user] for user in set(users)
+    }
     recommended_items = {}
-    
+
     # Use KMeans clustering to group users based on their watch history
     model = KMeans(n_clusters=5)
     user_groups = model.fit_predict(user_history)
@@ -33,7 +35,11 @@ media_type = input("Are you trying to find a show or movie? ")
 
 # Analyze the metadata of shows/movies in each group to make recommendations
 for group in set(user_groups):
-    group_metadata = [m for i, m in enumerate(metadata) if user_groups[i] == group and m.type == media_type]
+    group_metadata = [
+        m
+        for i, m in enumerate(metadata)
+        if user_groups[i] == group and m.type == media_type
+    ]
     group_users = [user for i, user in enumerate(users) if user_groups[i] == group]
 
     # Extracting features for content-based filtering
@@ -42,19 +48,21 @@ for group in set(user_groups):
     directors = [m.directors for m in group_metadata]
 popularity = [m.popularity for m in group_metadata]
 ratings = [m.rating for m in group_metadata]
-    releasedates = [m.releasedate for m in group_metadata]
-    tags = [m.tags for m in group_metadata]
-    year = [m.year for m in group_metadata]
-    features = np.array([genres, actors, directors, popularity, ratings, releasedates, tags, year])
+releasedates = [m.releasedate for m in group_metadata]
+tags = [m.tags for m in group_metadata]
+year = [m.year for m in group_metadata]
+features = np.array(
+    [genres, actors, directors, popularity, ratings, releasedates, tags, year]
+)
 
-    # Compute cosine similarity
-    cosine_sim = cosine_similarity(features)
-    content_based_recs = []
-    for i in range(len(group_metadata)):
-        similar_indices = np.argsort(cosine_sim[i])[:-11:-1]
-        similar_items = [group_metadata[i] for i in similar_indices]
-        content_based_recs.append(similar_items)
-    
+# Compute cosine similarity
+cosine_sim = cosine_similarity(features)
+content_based_recs = []
+for i in range(len(group_metadata)):
+    similar_indices = np.argsort(cosine_sim[i])[:-11:-1]
+    similar_items = [group_metadata[i] for i in similar_indices]
+    content_based_recs.append(similar_items)
+
     # Make recommendations to each user
     for i, user in enumerate(group_users):
         recs = content_based_recs[i]
