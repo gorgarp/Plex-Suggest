@@ -14,10 +14,6 @@ plex = PlexServer(baseurl, token)
 
 # Get the user's watch history
 watch_history = plex.history()
-# Get the user's token
-url = f'https://plex.tv/users/sign_in.json?user[login]={username}&user[password]={password}'
-response = requests.post(url)
-token = response.json()['user']['authentication_token']
 
 # Get the user's watch history
 url = f'https://plex.tv/api/v2/server/capabilities?X-Plex-Token={token}'
