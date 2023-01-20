@@ -2,11 +2,22 @@ import plexapi
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 import pickle
+import requests
+import json
 
 # Prompt the user for their Plex credentials
 username = input("Enter your Plex username: ")
 password = input("Enter your Plex password: ")
-plex = plexapi.PlexServer(plex.greggybear.com, username=username, password=password)
+
+# Get the user's token
+url = f'https://plex.tv/users/sign_in.json?user[login]={username}&user[password]={password}'
+response = requests.post(url)
+token = response.json()['user']['authentication_token']
+
+# Get the user's watch history
+url = f'https://plex.tv/api/v2/server/capabilities?X-Plex-Token={token}'
+response = requests.get(url)
+watch_history = response.json()
 
 try:
     # Load the data from a file
