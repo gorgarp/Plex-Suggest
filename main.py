@@ -27,6 +27,7 @@ def get_watch_history_of_all_users():
         "X-Plex-Token": "YOUR_PLEX_API_TOKEN"
     }
     watch_history_response = requests.get(watch_history_url, headers=headers)
+    print(watch_history_response.text)
     watch_history_data = json.loads(watch_history_response.text)
     watch_history_data = []
     for session in watch_history_data["MediaContainer"]["Metadata"]:
