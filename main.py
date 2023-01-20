@@ -6,7 +6,7 @@ import pickle
 # Prompt the user for their Plex credentials
 username = input("Enter your Plex username: ")
 password = input("Enter your Plex password: ")
-plex = plexapi.PlexServer(PLEX_URL, username=username, password=password)
+plex = plexapi.PlexServer(plex.greggybear.com, username=username, password=password)
 
 try:
     # Load the data from a file
