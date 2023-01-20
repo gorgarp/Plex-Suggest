@@ -25,7 +25,7 @@ if user_input.lower() == 'movies':
     movies = plex.library.section('Movies')
     titles = [movie.title for movie in movies.all()]
     genres = [movie.genres for movie in movies.all()]
-    tags = [movie.tags for movie in movies.all()]
+    studio = [movie.studio for movie in movies.all()]
     rating = [movie.rating for movie in movies.all()]
     popularity = [movie.popularity for movie in movies.all()]
 elif user_input.lower() == 'shows':
@@ -44,7 +44,7 @@ else:
 vectorizer = TfidfVectorizer()
 
 # Fit the vectorizer to the titles, genres, tags, rating and popularity
-vectorizer.fit(titles + genres + tags + rating + popularity)
+vectorizer.fit(titles + genres + studio + rating + popularity)
 
 # Get the user's watch history
 watch_history = plex.library.recentlyWatched()
@@ -52,15 +52,15 @@ watch_history = plex.library.recentlyWatched()
 # Get the titles of the shows in the watch history
 watch_history_titles = [item.title for item in watch_history]
 watch_history_genres = [item.genres for item in watch_history]
-watch_history_tags = [item.tags for item in watch_history]
+watch_history_studio = [item.studio for item in watch_history]
 watch_history_rating = [item.rating for item in watch_history]
 watch_history_popularity = [item.popularity for item in watch_history]
 
 # Vectorize the watch history titles, genres, tags, rating and popularity
-watch_history_vectors = vectorizer.transform(watch_history_titles + watch_history_genres + watch_history_tags + watch_history_rating + watch_history_popularity)
+watch_history_vectors = vectorizer.transform(watch_history_titles + watch_history_genres + watch_history_studio + watch_history_rating + watch_history_popularity)
 
 # Calculate the cosine similarity between the watch history titles, genres, tags, rating and popularity and all titles, genres, tags, rating and popularity
-similarities = cosine_similarity(watch_history_vectors, vectorizer.transform(titles + genres + tags + rating + popularity))
+similarities = cosine_similarity(watch_history_vectors, vectorizer.transform(titles + genres + studio + rating + popularity))
 
 # Get the indices of the most similar titles, genres, tags, rating and popularity
 most_similar_indices = similarities.argsort()[:, -5:][:, ::-1]
@@ -69,7 +69,7 @@ most_similar_indices = similarities.argsort()[:, -5:][:, ::-1]
 for i in most_similar_indices:
     print(titles[i])
     print(genres[i])
-    print(tags[i])
+    print(studio[i])
     print(rating[i])
     print(popularity[i])
 
