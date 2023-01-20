@@ -17,28 +17,28 @@ try:
 except FileNotFoundError:
     dataset = {}
 
-# Get the list of movies from the server
-movies = plex.library.section('Movies')
-movie_titles = [movie.title for movie in movies.all()]
-movie_genres = [movie.genres for movie in movies.all()]
-movie_tags = [movie.tags for movie in movies.all()]
-movie_rating = [movie.rating for movie in movies.all()]
-movie_popularity = [movie.popularity for movie in movies.all()]
+# Prompt the user to select which they want suggestions on
+user_input = input("Please enter 'movies' or 'shows' to get suggestions on: ")
 
-# Get the list of TV shows from the server
-tvshows = plex.library.section('TV Shows')
-tvshow_titles = [show.title for show in tvshows.all()]
-tvshow_genres = [show.genres for show in tvshows.all()]
-tvshow_tags = [show.tags for show in tvshows.all()]
-tvshow_rating = [show.rating for show in tvshows.all()]
-tvshow_popularity = [show.popularity for show in tvshows.all()]
-
-# Concatenate all titles, genres, tags, rating and popularity into one list
-titles = movie_titles + tvshow_titles
-genres = movie_genres + tvshow_genres
-tags = movie_tags + tvshow_tags
-rating = movie_rating + tvshow_rating
-popularity = movie_popularity + tvshow_popularity
+if user_input.lower() == 'movies':
+    # Get the list of movies from the server
+    movies = plex.library.section('Movies')
+    titles = [movie.title for movie in movies.all()]
+    genres = [movie.genres for movie in movies.all()]
+    tags = [movie.tags for movie in movies.all()]
+    rating = [movie.rating for movie in movies.all()]
+    popularity = [movie.popularity for movie in movies.all()]
+elif user_input.lower() == 'shows':
+    # Get the list of TV shows from the server
+    tvshows = plex.library.section('TV Shows')
+    titles = [show.title for show in tvshows.all()]
+    genres = [show.genres for show in tvshows.all()]
+    tags = [show.tags for show in tvshows.all()]
+    rating = [show.rating for show in tvshows.all()]
+    popularity = [show.popularity for show in tvshows.all()]
+else:
+    print("Invalid input. Please enter 'movies' or 'shows'.")
+    exit()
 
 # Create a Tf-Idf vectorizer
 vectorizer = TfidfVectorizer()
@@ -59,7 +59,7 @@ watch_history_popularity = [item.popularity for item in watch_history]
 # Vectorize the watch history titles, genres, tags, rating and popularity
 watch_history_vectors = vectorizer.transform(watch_history_titles + watch_history_genres + watch_history_tags + watch_history_rating + watch_history_popularity)
 
-# Calculate the cosine similarity between the watch history titles and all titles, genres, tags, rating and popularity
+# Calculate the cosine similarity between the watch history titles, genres, tags, rating and popularity and all titles, genres, tags, rating and popularity
 similarities = cosine_similarity(watch_history_vectors, vectorizer.transform(titles + genres + tags + rating + popularity))
 
 # Get the indices of the most similar titles, genres, tags, rating and popularity
