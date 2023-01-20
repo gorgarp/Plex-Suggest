@@ -6,12 +6,11 @@ import requests
 import json
 from plexapi.server import PlexServer
 
-# Prompt the user for their Plex credentials
-username = input("Enter your Plex username: ")
-password = input("Enter your Plex password: ")
+# Connect to the Plex server
+baseurl = 'http://localhost:32400'
+token = 'YOUR_TOKEN'
+plex = PlexServer(baseurl, token)
 
-# Authenticate the user
-plex = PlexServer(PLEX_URL, username=username, password=password)
 
 # Get the user's watch history
 watch_history = plex.history()
