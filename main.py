@@ -41,7 +41,7 @@ for group in set(user_groups):
     actors = [m.actors for m in group_metadata]
     directors = [m.directors for m in group_metadata]
 popularity = [m.popularity for m in group_metadata]
-    ratings = [m.rating for m in group_metadata]
+ratings = [m.rating for m in group_metadata]
     releasedates = [m.releasedate for m in group_metadata]
     tags = [m.tags for m in group_metadata]
     year = [m.year for m in group_metadata]
