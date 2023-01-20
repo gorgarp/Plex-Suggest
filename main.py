@@ -27,7 +27,6 @@ if user_input.lower() == 'movies':
     genres = [movie.genres for movie in movies.all()]
     studio = [movie.studio for movie in movies.all()]
     rating = [movie.rating for movie in movies.all()]
-    popularity = [movie.popularity for movie in movies.all()]
 elif user_input.lower() == 'shows':
     # Get the list of TV shows from the server
     tvshows = plex.library.section('TV Shows')
