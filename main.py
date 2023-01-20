@@ -1,98 +1,78 @@
 import plexapi
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 import pickle
-import requests
-import json
 from plexapi.server import PlexServer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
+from datetime import datetime, timedelta
 
 # Connect to the Plex server
 baseurl = 'http://localhost:32400'
 token = 'YOUR_TOKEN'
 plex = PlexServer(baseurl, token)
 
-
-# Get the user's watch history
-watch_history = plex.history()
-
-# Get the user's watch history
-url = f'https://plex.tv/api/v2/server/capabilities?X-Plex-Token={token}'
-response = requests.get(url)
-watch_history = response.json()
-
+# Load the dataset from disk (if it exists)
 try:
-    # Load the data from a file
-    with open("watch_history.pkl", "rb") as f:
-        watch_history = pickle.load(f)
-    with open("user_groups.pkl", "rb") as f:
-        user_groups = pickle.load(f)
-    with open("recommended_items.pkl", "rb") as f:
-        recommended_items = pickle.load(f)
-except:
-    # Extract the show/movie metadata and user watch history from the data
-    watch_history = plex.history()
-    metadata = [h.metadata for h in watch_history]
-    users = [h.user for h in watch_history]
-    user_history = {
-        user: [m.ratingKey for m in metadata if m.user == user] for user in set(users)
-    }
-    recommended_items = {}
+    with open('dataset.pkl', 'rb') as f:
+        dataset = pickle.load(f)
+except FileNotFoundError:
+    dataset = {}
 
-    # Use KMeans clustering to group users based on their watch history
-    model = KMeans(n_clusters=5)
-    user_groups = model.fit_predict(user_history)
+# Get the list of movies from the server
+movies = plex.library.section('Movies')
+movie_titles = [movie.title for movie in movies.all()]
+movie_genres = [movie.genres for movie in movies.all()]
+movie_tags = [movie.tags for movie in movies.all()]
+movie_rating = [movie.rating for movie in movies.all()]
+movie_popularity = [movie.popularity for movie in movies.all()]
 
-# Ask the user if they are trying to find a show or movie
-media_type = input("Are you trying to find a show or movie? ")
+# Get the list of TV shows from the server
+tvshows = plex.library.section('TV Shows')
+tvshow_titles = [show.title for show in tvshows.all()]
+tvshow_genres = [show.genres for show in tvshows.all()]
+tvshow_tags = [show.tags for show in tvshows.all()]
+tvshow_rating = [show.rating for show in tvshows.all()]
+tvshow_popularity = [show.popularity for show in tvshows.all()]
 
-# Analyze the metadata of shows/movies in each group to make recommendations
-for group in set(user_groups):
-    group_metadata = [
-        m
-        for i, m in enumerate(metadata)
-        if user_groups[i] == group and m.type == media_type
-    ]
-    group_users = [user for i, user in enumerate(users) if user_groups[i] == group]
+# Concatenate all titles, genres, tags, rating and popularity into one list
+titles = movie_titles + tvshow_titles
+genres = movie_genres + tvshow_genres
+tags = movie_tags + tvshow_tags
+rating = movie_rating + tvshow_rating
+popularity = movie_popularity + tvshow_popularity
 
-    # Extracting features for content-based filtering
-    genres = [m.genres for m in group_metadata]
-    actors = [m.actors for m in group_metadata]
-    directors = [m.directors for m in group_metadata]
-popularity = [m.popularity for m in group_metadata]
-ratings = [m.rating for m in group_metadata]
-releasedates = [m.releasedate for m in group_metadata]
-tags = [m.tags for m in group_metadata]
-year = [m.year for m in group_metadata]
-features = np.array(
-    [genres, actors, directors, popularity, ratings, releasedates, tags, year]
-)
+# Create a Tf-Idf vectorizer
+vectorizer = TfidfVectorizer()
 
-# Compute cosine similarity
-cosine_sim = cosine_similarity(features)
-content_based_recs = []
-for i in range(len(group_metadata)):
-    similar_indices = np.argsort(cosine_sim[i])[:-11:-1]
-    similar_items = [group_metadata[i] for i in similar_indices]
-    content_based_recs.append(similar_items)
+# Fit the vectorizer to the titles, genres, tags, rating and popularity
+vectorizer.fit(titles + genres + tags + rating + popularity)
 
-    # Make recommendations to each user
-    for i, user in enumerate(group_users):
-        recs = content_based_recs[i]
-        # Remove already watched items from recommendations
-        recs = [rec for rec in recs if rec.ratingKey not in user_history[user]]
-        # Remove items that have already been recommended
-        recs = [rec for rec in recs if rec.ratingKey not in recommended_items.keys()]
-        # Update the recommended_items dictionary
-        for rec in recs:
-            recommended_items[rec.ratingKey] = rec
-        # Print the recommendations for the user
-        print(f"Recommendations for {user}:")
-        for rec in recs:
-            print(rec.title)
-    # Save the data to a file
-    with open("watch_history.pkl", "wb") as f:
-        pickle.dump(watch_history, f)
-    with open("user_groups.pkl", "wb") as f:
-        pickle.dump(user_groups, f)
-    with open("recommended_items.pkl", "wb") as f:
-        pickle.dump(recommended_items, f)
+# Get the user's watch history
+watch_history = plex.library.recentlyWatched()
+
+# Get the titles of the shows in the watch history
+watch_history_titles = [item.title for item in watch_history]
+watch_history_genres = [item.genres for item in watch_history]
+watch_history_tags = [item.tags for item in watch_history]
+watch_history_rating = [item.rating for item in watch_history]
+watch_history_popularity = [item.popularity for item in watch_history]
+
+# Vectorize the watch history titles, genres, tags, rating and popularity
+watch_history_vectors = vectorizer.transform(watch_history_titles + watch_history_genres + watch_history_tags + watch_history_rating + watch_history_popularity)
+
+# Calculate the cosine similarity between the watch history titles and all titles, genres, tags, rating and popularity
+similarities = cosine_similarity(watch_history_vectors, vectorizer.transform(titles + genres + tags + rating + popularity))
+
+# Get the indices of the most similar titles, genres, tags, rating and popularity
+most_similar_indices = similarities.argsort()[:, -5:][:, ::-1]
+
+# Print the most similar titles, genres, tags, rating and popularity
+for i in most_similar_indices:
+    print(titles[i])
+    print(genres[i])
+    print(tags[i])
+    print(rating[i])
+    print(popularity[i])
+
+# Save the dataset to disk
+with open('dataset.pkl', 'wb') as f:
+    pickle.dump(dataset, f)
