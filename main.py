@@ -1,77 +1,77 @@
 import plexapi
-import pickle
-from plexapi.server import PlexServer
-from sklearn.metrics.pairwise import cosine_similarity
+from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
-from datetime import datetime, timedelta
+from sklearn.cluster import KMeans
+import pickle
+import argparse
 
-# Connect to the Plex server
-baseurl = 'http://localhost:32400'
-token = 'YOUR_TOKEN'
-plex = PlexServer(baseurl, token)
+#parse the command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument('--baseurl', help='baseurl of the plex server', required=True)
+parser.add_argument('--token', help='token to access the plex server', required=True)
+args = parser.parse_args()
 
-# Load the dataset from disk (if it exists)
+# Use token-based authentication to log into a Plex server
+plex = plexapi.PlexServer(args.baseurl, args.token)
+
+# Pull the user's watch history
+watch_history = plex.history()
+
+# Fetch all the shows and movies from the server
+shows = plex.library.section('shows').all()
+movies = plex.library.section('movies').all()
+
+# Categorize shows and movies based on their metadata
+shows_data = [show.summary for show in shows]
+movies_data = [movie.summary for movie in movies]
+
+# Combine the data of shows and movies
+data = shows_data + movies_data
+
+# Extract features from the data using TfidfVectorizer
+vectorizer = TfidfVectorizer(stop_words='english')
+X = vectorizer.fit_transform(data)
+
+# Use k-means clustering to group the data into clusters
+kmeans = KMeans(n_clusters=5)
+kmeans.fit(X)
+
+# Assign each show/movie to a cluster
+clusters = kmeans.predict(X)
+
+# Prompt the user for suggestions
+prompt = input("Would you like suggestions for shows or movies? (shows/movies)")
+
+# Check if the suggestions file exists
 try:
-    with open('dataset.pkl', 'rb') as f:
-        dataset = pickle.load(f)
+    with open("suggestions.pickle", "rb") as f:
+        stored_data = pickle.load(f)
+    # Check the time elapsed since the last suggestion
+    time_elapsed = datetime.now() - stored_data["timestamp"]
+    if time_elapsed.days < 15:
+        # Suggest the same shows/movies
+        suggestions = stored_data["suggestions"]
+    else:
+        # Update the suggestions
+        if prompt.lower() == "shows":
+            suggestions = [shows[i] for i in range(len(shows)) if clusters[i] == kmeans.predict(vectorizer.transform([watch_history[-1].summary]))[0]]
+        elif prompt.lower() == "movies":
+            suggestions = [movies[i] for i in range(len(movies)) if clusters[i] == kmeans.predict(vectorizer.transform([watch_history[-1].summary]))[0]]
+        else:
+            print("Invalid input. Please enter 'shows' or 'movies'.")
+        #update the stored suggestions
+        with open("suggestions.pickle", "wb") as f:
+            pickle.dump({"timestamp": datetime.now(), "suggestions": suggestions}, f)
 except FileNotFoundError:
-    dataset = {}
+    suggestions = [shows[i] for i in range(len(shows)) if clusters[i] == kmeans.predict(vectorizer.transform([watch_history[-1].summary]))[0]]
+    elif prompt.lower() == "movies":
+        suggestions = [movies[i] for i in range(len(movies)) if clusters[i] == kmeans.predict(vectorizer.transform([watch_history[-1].summary]))[0]]
+    else:
+        print("Invalid input. Please enter 'shows' or 'movies'.")
+    with open("suggestions.pickle", "wb") as f:
+        pickle.dump({"timestamp": datetime.now(), "suggestions": suggestions}, f)
 
-# Prompt the user to select which they want suggestions on
-user_input = input("Please enter 'movies' or 'shows' to get suggestions on: ")
-
-if user_input.lower() == 'movies':
-    # Get the list of movies from the server
-    movies = plex.library.section('Movies')
-    titles = [movie.title for movie in movies.all()]
-    genres = [movie.genres for movie in movies.all()]
-    studio = [movie.studio for movie in movies.all()]
-    rating = [movie.rating for movie in movies.all()]
-elif user_input.lower() == 'shows':
-    # Get the list of TV shows from the server
-    tvshows = plex.library.section('TV Shows')
-    titles = [show.title for show in tvshows.all()]
-    genres = [show.genres for show in tvshows.all()]
-    tags = [show.tags for show in tvshows.all()]
-    rating = [show.rating for show in tvshows.all()]
-    popularity = [show.popularity for show in tvshows.all()]
-else:
-    print("Invalid input. Please enter 'movies' or 'shows'.")
-    exit()
-
-# Create a Tf-Idf vectorizer
-vectorizer = TfidfVectorizer()
-
-# Fit the vectorizer to the titles, genres, tags, rating and popularity
-vectorizer.fit(titles + genres + studio + rating )
-
-# Get the user's watch history
-watch_history = plex.library.recentlyWatched()
-
-# Get the titles of the shows in the watch history
-watch_history_titles = [item.title for item in watch_history]
-watch_history_genres = [item.genres for item in watch_history]
-watch_history_studio = [item.studio for item in watch_history]
-watch_history_rating = [item.rating for item in watch_history]
-watch_history_popularity = [item.popularity for item in watch_history]
-
-# Vectorize the watch history titles, genres, tags, rating and popularity
-watch_history_vectors = vectorizer.transform(watch_history_titles + watch_history_genres + watch_history_studio + watch_history_rating + watch_history_popularity)
-
-# Calculate the cosine similarity between the watch history titles, genres, tags, rating and popularity and all titles, genres, tags, rating and popularity
-similarities = cosine_similarity(watch_history_vectors, vectorizer.transform(titles + genres + studio + rating + popularity))
-
-# Get the indices of the most similar titles, genres, tags, rating and popularity
-most_similar_indices = similarities.argsort()[:, -5:][:, ::-1]
-
-# Print the most similar titles, genres, tags, rating and popularity
-for i in most_similar_indices:
-    print(titles[i])
-    print(genres[i])
-    print(studio[i])
-    print(rating[i])
-    print(popularity[i])
-
-# Save the dataset to disk
-with open('dataset.pkl', 'wb') as f:
-    pickle.dump(dataset, f)
+# Print the suggestions
+print("Here are your suggestions:")
+for suggestion in suggestions:
+    print(suggestion.title)
